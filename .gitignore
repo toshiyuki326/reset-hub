@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.local
+.env.staging
+.env.staging.local
+.env.development.local
+playwright-report
+test-results
+.DS_Store
+*.tsbuildinfo
+supabase/.temp

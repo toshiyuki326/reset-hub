@@ -1,0 +1,3 @@
+export type AuthCallbackDestination='loading'|'/'|'/login';
+export function authCallbackDestination({loading,authenticated,callbackError,authError}:{loading:boolean;authenticated:boolean;callbackError:boolean;authError:boolean}):AuthCallbackDestination{if(loading)return'loading';if(authenticated)return'/';if(callbackError||authError)return'/login';return'/login'}
+export function hasSafeCallbackError(search:string,hash:string){const query=new URLSearchParams(search);const fragment=new URLSearchParams(hash.startsWith('#')?hash.slice(1):hash);return query.has('error')||query.has('error_code')||fragment.has('error')||fragment.has('error_code')}

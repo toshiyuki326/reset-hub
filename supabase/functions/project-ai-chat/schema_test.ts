@@ -1,0 +1,4 @@
+import {assertEquals} from 'https://deno.land/std@0.224.0/assert/mod.ts';import {aiResponseSchema} from './schema.ts';
+Deno.test('accepts a conversation response',()=>assertEquals(aiResponseSchema.safeParse({type:'message',content:'回答',title:null,summary:null,actions:[]}).success,true));
+Deno.test('accepts an allowed proposal',()=>assertEquals(aiResponseSchema.safeParse({type:'proposal',content:null,title:'Task proposal',summary:'整理します',actions:[{kind:'create_task',target:'task',payload:{title:'準備',description:null,status:'todo',priority:'medium',assignee_id:null,due_date:null,goal_id:null,target_date:null,location:null,start_at:null,end_at:null,all_day:null}}]}).success,true));
+Deno.test('rejects an unknown proposal kind',()=>assertEquals(aiResponseSchema.safeParse({type:'proposal',content:null,title:'Bad',summary:'Bad',actions:[{kind:'delete_everything',target:'all',payload:{}}]}).success,false));

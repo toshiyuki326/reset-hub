@@ -1,0 +1,4 @@
+import {supabase} from '../lib/supabase';
+export async function connection(communityId:string){if(!supabase)return null;const {data,error}=await supabase.from('google_connections').select('google_email,calendar_id,token_status').eq('community_id',communityId).maybeSingle();if(error)throw error;return data}
+export async function connect(communityId:string){if(!supabase)return;const {data,error}=await supabase.functions.invoke(`google-calendar-connect?community_id=${encodeURIComponent(communityId)}`,{method:'GET'});if(error)throw error;if(!data?.url)throw new Error('OAuth URL missing');location.assign(data.url)}
+export async function disconnect(communityId:string){if(!supabase)return;const {error}=await supabase.functions.invoke(`google-calendar-connect?action=disconnect&community_id=${encodeURIComponent(communityId)}`,{method:'DELETE'});if(error)throw error}

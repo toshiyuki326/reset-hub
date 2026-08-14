@@ -1,0 +1,3 @@
+import {z} from 'zod';
+export const taskSchema=z.object({title:z.string().trim().min(1,'タイトルを入力してください').max(160),description:z.string().max(5000),dueDate:z.string().optional(),priority:z.enum(['low','medium','high','urgent']),status:z.enum(['todo','in_progress','waiting','done','cancelled']),assigneeId:z.string().optional()});
+export const eventSchema=z.object({title:z.string().trim().min(1,'タイトルを入力してください').max(160),description:z.string().max(5000),location:z.string().max(500),startAt:z.string().min(1),endAt:z.string().min(1)}).refine(x=>new Date(x.endAt)>=new Date(x.startAt),{message:'終了日時は開始日時より後にしてください',path:['endAt']});

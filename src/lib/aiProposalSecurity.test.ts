@@ -1,0 +1,9 @@
+import {describe,expect,it} from 'vitest';import {readFileSync} from 'node:fs';
+const migration=readFileSync(new URL('../../supabase/migrations/202608130005_secure_ai_proposal_review.sql',import.meta.url),'utf8');const repository=readFileSync(new URL('../repositories/aiConversationRepository.ts',import.meta.url),'utf8');const service=readFileSync(new URL('../services/projectAiService.ts',import.meta.url),'utf8');
+describe('AI proposal approval boundary',()=>{it('removes direct browser updates to proposal state',()=>{expect(migration).toContain('revoke update on public.ai_conversation_messages from authenticated');expect(migration).toContain('grant execute on function public.review_ai_proposal(uuid,text) to authenticated')});it('limits review decisions and requires ownership',()=>{expect(migration).toContain("p_decision not in ('approved', 'rejected')");expect(migration).toContain('s.profile_id = v_profile_id');expect(migration).toContain("v_message.proposal_status not in ('proposal', 'review')")});
+  // Sprint 7 adds execution, but only through the execute-ai-proposal Edge Function
+  // (see aiProposalExecutionSecurity.test.ts) — never as a direct table write or a
+  // repository-level RPC the browser could call with an arbitrary payload.
+  it('uses the review RPC and never writes tasks/proposal-state directly from the repository',()=>{expect(repository).toContain("rpc('review_ai_proposal'");expect(repository).not.toMatch(/from\('tasks'\)\.(insert|update)/);expect(repository).not.toMatch(/proposal_status:\s*['"](executing|executed)['"]/)});
+  it('routes execution through the dedicated Edge Function, not a plain RPC the browser could call directly',()=>{expect(service).toContain("functions.invoke('execute-ai-proposal'");expect(service).not.toContain("rpc('execute_ai_proposal'");expect(service).not.toContain("rpc('mark_ai_proposal_failed'")});
+});
