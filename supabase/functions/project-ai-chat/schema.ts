@@ -1,10 +1,16 @@
 import {z} from 'npm:zod@4.0.17';
+import {proposalActionJsonSchema,proposalActionSchema} from '../_shared/actionContract.ts';
+export {allowedProposalKinds,createEventPayloadSchema,createGoalPayloadSchema,createTaskPayloadSchema,proposalActionSchema,updateGoalPayloadSchema,updateTaskPayloadSchema} from '../_shared/actionContract.ts';
 
-export const allowedProposalKinds=['create_task','update_task','create_goal','update_goal','create_event'] as const;
-const payload=z.object({title:z.string().nullable(),description:z.string().nullable(),status:z.string().nullable(),priority:z.string().nullable(),assignee_id:z.string().uuid().nullable(),due_date:z.string().nullable(),goal_id:z.string().uuid().nullable(),target_date:z.string().nullable(),location:z.string().nullable(),start_at:z.string().nullable(),end_at:z.string().nullable(),all_day:z.boolean().nullable()}).strict();
-const action=z.object({kind:z.enum(allowedProposalKinds),target:z.string().min(1).max(160),payload}).strict();
-const base=z.object({type:z.enum(['message','proposal']),content:z.string().nullable(),title:z.string().nullable(),summary:z.string().nullable(),actions:z.array(action).max(10)}).strict();
-export const aiResponseSchema=base.superRefine((value,ctx)=>{if(value.type==='message'&&(!value.content||value.title!==null||value.summary!==null||value.actions.length!==0))ctx.addIssue({code:'custom',message:'invalid message response'});if(value.type==='proposal'&&(!value.title||!value.summary||value.content!==null||value.actions.length===0))ctx.addIssue({code:'custom',message:'invalid proposal response'})});
+const messageResponse=z.object({type:z.literal('message'),content:z.string().min(1),title:z.null(),summary:z.null(),actions:z.array(proposalActionSchema).length(0)}).strict();
+const proposalResponse=z.object({type:z.literal('proposal'),content:z.null(),title:z.string().min(1),summary:z.string().min(1),actions:z.array(proposalActionSchema).min(1).max(10)}).strict();
+export const aiResponseSchema=z.discriminatedUnion('type',[messageResponse,proposalResponse]);
+export const providerResponseEnvelopeSchema=z.object({response:aiResponseSchema}).strict();
 export type StructuredAiResponse=z.infer<typeof aiResponseSchema>;
 
-export const responseJsonSchema={type:'object',additionalProperties:false,required:['type','content','title','summary','actions'],properties:{type:{type:'string',enum:['message','proposal']},content:{type:['string','null']},title:{type:['string','null']},summary:{type:['string','null']},actions:{type:'array',maxItems:10,items:{type:'object',additionalProperties:false,required:['kind','target','payload'],properties:{kind:{type:'string',enum:[...allowedProposalKinds]},target:{type:'string'},payload:{type:'object',additionalProperties:false,required:['title','description','status','priority','assignee_id','due_date','goal_id','target_date','location','start_at','end_at','all_day'],properties:{title:{type:['string','null']},description:{type:['string','null']},status:{type:['string','null']},priority:{type:['string','null']},assignee_id:{type:['string','null']},due_date:{type:['string','null']},goal_id:{type:['string','null']},target_date:{type:['string','null']},location:{type:['string','null']},start_at:{type:['string','null']},end_at:{type:['string','null']},all_day:{type:['boolean','null']}}}}}}}} as const;
+const messageJsonSchema={type:'object',additionalProperties:false,required:['type','content','title','summary','actions'],properties:{type:{type:'string',enum:['message']},content:{type:'string',minLength:1},title:{type:'null'},summary:{type:'null'},actions:{type:'array',maxItems:0,items:proposalActionJsonSchema}}} as const;
+const proposalJsonSchema={type:'object',additionalProperties:false,required:['type','content','title','summary','actions'],properties:{type:{type:'string',enum:['proposal']},content:{type:'null'},title:{type:'string',minLength:1},summary:{type:'string',minLength:1},actions:{type:'array',minItems:1,maxItems:10,items:proposalActionJsonSchema}}} as const;
+
+// Structured Outputs forbids a root-level anyOf. Keep the root an object and
+// place the exact message/proposal discriminated union one level below it.
+export const responseJsonSchema={type:'object',additionalProperties:false,required:['response'],properties:{response:{anyOf:[messageJsonSchema,proposalJsonSchema]}}} as const;
