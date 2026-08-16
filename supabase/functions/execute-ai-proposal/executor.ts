@@ -1,9 +1,14 @@
 import type {SupabaseClient} from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import type {SafeErrorCode} from './schema.ts';
-import {validateExecutableActions} from './taskExecutor.ts';
+import {validateExecutableActions, type ActionValidationDiagnostic} from './taskExecutor.ts';
+
+export type ExecutorDiagnostic = ActionValidationDiagnostic | {
+  stage: 'rpc';
+  safeDbCode: string;
+};
 
 export class ExecutorError extends Error {
-  constructor(public code: SafeErrorCode, public status: number) {
+  constructor(public code: SafeErrorCode, public status: number, public diagnostic?: ExecutorDiagnostic) {
     super(code);
   }
 }
@@ -83,7 +88,7 @@ export async function executeApprovedProposal(
   }
 
   const invalid = validateExecutableActions(message.proposal);
-  if (invalid) throw new ExecutorError(invalid.code, STATUS_BY_CODE[invalid.code]);
+  if (invalid) throw new ExecutorError(invalid.code, STATUS_BY_CODE[invalid.code], invalid.diagnostic);
 
   const {data: executed, error: rpcError} = await admin.rpc('execute_ai_proposal', {
     p_message_id: input.messageId,
@@ -101,7 +106,7 @@ export async function executeApprovedProposal(
       if (markError) console.error('mark_ai_proposal_failed also failed', {code: markError.code});
     }
     console.error('execute_ai_proposal rejected', {code, pgCode: rpcError.code});
-    throw new ExecutorError(code, STATUS_BY_CODE[code]);
+    throw new ExecutorError(code, STATUS_BY_CODE[code], {stage: 'rpc', safeDbCode: rpcError.code || 'unknown'});
   }
 
   return executed;

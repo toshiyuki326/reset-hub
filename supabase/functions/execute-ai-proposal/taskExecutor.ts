@@ -1,51 +1,44 @@
-import {z} from 'npm:zod@4.0.17';
+import {allowedProposalKinds,proposalActionSchema} from '../_shared/actionContract.ts';
+export const executableActionKinds = allowedProposalKinds;
+export type ActionValidationDiagnostic = {
+  stage: 'proposal_schema' | 'action_kind' | 'action_schema';
+  actionIndex?: number;
+  actionKind?: string;
+  payloadKeys?: string[];
+  issues?: Array<{path: string; code: string; expected?: string}>;
+};
+export type ActionValidationFailure = {code: 'UNSUPPORTED_ACTION' | 'INVALID_ACTION'; diagnostic: ActionValidationDiagnostic};
 
-// Only the fields create_task/update_task actually use. The stored proposal payload
-// carries the wider project-ai-chat shape (goal_id, location, start_at, ...); unknown
-// keys are ignored here rather than rejected, since this schema intentionally covers
-// a subset of allowed proposal kinds.
-const taskPayloadSchema = z.object({
-  title: z.string().trim().max(160).nullable(),
-  description: z.string().max(5000).nullable(),
-  status: z.enum(['todo', 'in_progress', 'waiting', 'done', 'cancelled']).nullable(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).nullable(),
-  assignee_id: z.string().uuid().nullable(),
-  due_date: z.string().nullable(),
-});
+const safeIssues = (error: {issues:Array<{path:PropertyKey[];code:string;expected?:unknown}>}) => error.issues.slice(0, 8).map(issue => ({
+  path: issue.path.join('.'),
+  code: issue.code,
+  ...('expected' in issue && typeof issue.expected === 'string' ? {expected: issue.expected} : {}),
+}));
+const payloadKeys = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value)
+  ? Object.keys(value as Record<string, unknown>).sort()
+  : undefined;
 
-export const executableActionKinds = ['create_task', 'update_task'] as const;
-
-const executableActionSchema = z.object({
-  kind: z.string(),
-  target: z.string().nullable().optional(),
-  payload: taskPayloadSchema,
-});
-
-export const executableProposalSchema = z.object({
-  actions: z.array(executableActionSchema).min(1).max(10),
-});
-
-export type ActionValidationFailure = {code: 'UNSUPPORTED_ACTION' | 'INVALID_ACTION'};
-
-/**
- * Defense-in-depth pre-check run before the atomic claim RPC. This is not the
- * source of truth — execute_ai_proposal() re-validates every field inside the same
- * transaction as the write — but it lets malformed or unsupported proposals fail
- * fast with a clean error code, without spending a claim attempt.
- */
 export function validateExecutableActions(proposal: unknown): ActionValidationFailure | null {
-  const parsed = executableProposalSchema.safeParse(proposal);
-  if (!parsed.success) return {code: 'INVALID_ACTION'};
-
-  for (const action of parsed.data.actions) {
-    if (!(executableActionKinds as readonly string[]).includes(action.kind)) {
-      return {code: 'UNSUPPORTED_ACTION'};
+  if(proposal===null||typeof proposal!=='object'||Array.isArray(proposal)){
+    return {code:'INVALID_ACTION',diagnostic:{stage:'proposal_schema'}};
+  }
+  const actions=(proposal as {actions?:unknown}).actions;
+  if(!Array.isArray(actions)||actions.length<1||actions.length>10){
+    return {code:'INVALID_ACTION',diagnostic:{stage:'proposal_schema'}};
+  }
+  for (const [actionIndex, action] of actions.entries()) {
+    if(action===null||typeof action!=='object'||Array.isArray(action)){
+      return {code:'INVALID_ACTION',diagnostic:{stage:'action_schema',actionIndex}};
     }
-    if (action.kind === 'create_task' && !action.payload.title?.trim()) {
-      return {code: 'INVALID_ACTION'};
+    const candidate=action as {kind?:unknown;payload?:unknown};
+    const actionKind=typeof candidate.kind==='string'?candidate.kind:undefined;
+    const diagnosticBase = {actionIndex, ...(actionKind?{actionKind}:{}), payloadKeys: payloadKeys(candidate.payload)};
+    if (actionKind&&!(executableActionKinds as readonly string[]).includes(actionKind)) {
+      return {code: 'UNSUPPORTED_ACTION', diagnostic: {stage: 'action_kind', ...diagnosticBase}};
     }
-    if (action.kind === 'update_task' && !action.target?.trim()) {
-      return {code: 'INVALID_ACTION'};
+    const validated = proposalActionSchema.safeParse(action);
+    if (!validated.success) {
+      return {code: 'INVALID_ACTION', diagnostic: {stage: 'action_schema', ...diagnosticBase, issues: safeIssues(validated.error)}};
     }
   }
   return null;

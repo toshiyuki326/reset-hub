@@ -110,10 +110,24 @@ Deno.test('rejects a proposal already executed without calling the RPC', async (
 Deno.test('rejects an unsupported action kind before calling the RPC', async () => {
   const tables = baseTables();
   const goalPayload = {title: null, description: null, status: null, priority: null, assignee_id: null, due_date: null};
-  (tables.ai_conversation_messages[0] as Row).proposal = {actions: [{kind: 'create_goal', target: 'goal', payload: goalPayload}]};
+  (tables.ai_conversation_messages[0] as Row).proposal = {actions: [{kind: 'delete_everything', target: 'all', payload: goalPayload}]};
   const client = new FakeClient(tables, neverCalled);
   const error = await assertRejects(() => executeApprovedProposal(asClient(client), {messageId: 'msg-1', profileId: 'profile-1'}), ExecutorError);
   assertEquals((error as ExecutorError).code, 'UNSUPPORTED_ACTION');
+  assertEquals(client.rpcCalls.length, 0);
+});
+
+Deno.test('surfaces only safe validation diagnostics before calling the RPC', async () => {
+  const tables = baseTables();
+  (tables.ai_conversation_messages[0] as Row).proposal = {actions: [{kind: 'create_task', target: 'task', payload: {
+    title: 'Synthetic task', description: null, status: '未完了', priority: null, assignee_id: null,
+    due_date: '2026-08-16T12:00:00Z',
+  }}]};
+  const client = new FakeClient(tables, neverCalled);
+  const error = await assertRejects(() => executeApprovedProposal(asClient(client), {messageId: 'msg-1', profileId: 'profile-1'}), ExecutorError);
+  assertEquals((error as ExecutorError).code, 'INVALID_ACTION');
+  assertEquals((error as ExecutorError).diagnostic?.stage, 'action_schema');
+  assertEquals(JSON.stringify((error as ExecutorError).diagnostic).includes('Synthetic task'), false);
   assertEquals(client.rpcCalls.length, 0);
 });
 
@@ -159,6 +173,17 @@ Deno.test('an unrecognized RPC error falls back to EXECUTION_FAILED and is still
   const error = await assertRejects(() => executeApprovedProposal(asClient(client), {messageId: 'msg-1', profileId: 'profile-1'}), ExecutorError);
   assertEquals((error as ExecutorError).code, 'EXECUTION_FAILED');
   assertEquals(client.rpcCalls[1]?.args, {p_message_id: 'msg-1', p_profile_id: 'profile-1', p_error_code: 'EXECUTION_FAILED'});
+});
+
+Deno.test('a network failure cannot trigger a second write path or direct fallback mutation', async () => {
+  const tables = baseTables();
+  const client = new FakeClient(tables, async name => {
+    if (name === 'execute_ai_proposal') throw new Error('network disconnected');
+    throw new Error(`unexpected rpc ${name}`);
+  });
+  await assertRejects(() => executeApprovedProposal(asClient(client), {messageId: 'msg-1', profileId: 'profile-1'}), Error, 'network disconnected');
+  assertEquals(client.rpcCalls.map(call => call.name), ['execute_ai_proposal']);
+  assertEquals((tables.ai_conversation_messages[0] as Row).proposal_status, 'approved');
 });
 
 Deno.test('the original error is returned to the caller even if the secondary failure-marking call itself fails', async () => {
