@@ -7,6 +7,9 @@ dist
 .env.development.local
 playwright-report
 test-results
+coverage
 .DS_Store
 *.tsbuildinfo
+*.log
 supabase/.temp
+supabase/.branches

@@ -1,5 +1,15 @@
 # Handoff note — Sprint 7 (Approved Proposal Executor Foundation)
 
+## 2026-08-16 release-planning update
+
+Production-prep now uses explicit `APP_ENV`: `development`/`staging` may allow local Real Browser Test origins, while missing/unknown values are treated as Production and Production permits only one exact HTTPS `APP_URL`. Production remains undeployed; staging must receive `APP_ENV=staging` only in a separately approved change before the next AI Function deployment.
+
+Staging is formally `RC_READY_STAGING_VALIDATED`: all five actions passed proposal, no-auto-execute, review, explicit execution, HTTP/DB/UI semantics and audit. The post-execution Event Store refresh is implemented and passed reload-free staging Human validation.
+
+Production has **not** been changed or deployed. The release package now includes `docs/PRODUCTION_ARCHITECTURE.md`, `PRODUCTION_DEPLOYMENT.md`, `PRODUCTION_ROLLBACK.md`, `PRODUCTION_SMOKE_TEST.md`, `PRODUCTION_OPERATIONS.md` and `PRODUCTION_CHECKLIST.md`. Before any Production approval, resolve the exact frontend origin/hosting target, Production Supabase ref/region/plan, backup/PITR decision, Owner bootstrap identity, integration owners and rollback artifact. Never run `seed.sql` in Production.
+
+The user-facing choices and recommended defaults are consolidated in `docs/PRODUCTION_DECISION_SHEET.md`. Current recommendation is Cloudflare Pages, `hub.<owned-domain>`, Supabase Tokyo/Pro, recovery tier B, custom SMTP, a $25 OpenAI budget, and phased Google/LINE enablement. These are proposals only; no account, resource, commit or tag has been created.
+
 This folder was AirDropped from a MacBook Pro (where it was developed with Claude Code)
 to continue on a Mac mini with Codex. Git history was initialized locally on the source
 machine specifically so this handoff is traceable — there is no shared remote yet.
