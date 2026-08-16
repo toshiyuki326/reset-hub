@@ -1,3 +1,20 @@
-import React,{Suspense,lazy} from 'react';import ReactDOM from 'react-dom/client';import {BrowserRouter,Route,Routes} from 'react-router-dom';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';import {Toaster} from 'sonner';import {StoreProvider} from './app/Store';import {AuthProvider} from './app/AuthProvider';import AuthGate from './app/AuthGate';import AppLayout from './components/layout/AppLayout';import DashboardPage from './pages/DashboardPage';import TasksPage from './pages/TasksPage';import CalendarPage from './pages/CalendarPage';import InboxPage from './pages/InboxPage';import EventsPage from './pages/EventsPage';import MembersPage from './pages/MembersPage';import SettingsPage from './pages/SettingsPage';import LoginPage from './pages/LoginPage';import AuthCallbackPage from './pages/AuthCallbackPage';import MorePage from './pages/MorePage';import './styles.css';
-const ProjectAiPage=lazy(()=>import('./pages/ProjectAiPage'));const projectAi=<Suspense fallback={<div className="app-state"><span className="spinner"/><p>Project AIを読み込んでいます</p></div>}><ProjectAiPage/></Suspense>;
-const q=new QueryClient();ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={q}><AuthProvider><StoreProvider><BrowserRouter><Routes><Route path="/login" element={<LoginPage/>}/><Route path="/auth/callback" element={<AuthCallbackPage/>}/><Route element={<AuthGate/>}><Route element={<AppLayout/>}><Route index element={<DashboardPage/>}/><Route path="tasks" element={<TasksPage/>}/><Route path="calendar" element={<CalendarPage/>}/><Route path="inbox" element={<InboxPage/>}/><Route path="events" element={<EventsPage/>}/><Route path="project-ai" element={projectAi}/><Route path="members" element={<MembersPage/>}/><Route path="settings" element={<SettingsPage/>}/><Route path="more" element={<MorePage/>}/></Route></Route></Routes></BrowserRouter><Toaster richColors position="top-center"/></StoreProvider></AuthProvider></QueryClientProvider></React.StrictMode>);
+import React,{Suspense,lazy} from 'react';
+import ReactDOM from 'react-dom/client';
+import {BrowserRouter,Route,Routes} from 'react-router-dom';
+import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
+import {Toaster} from 'sonner';
+import {StoreProvider} from './app/Store';
+import {AuthProvider} from './app/AuthProvider';
+import AuthGate from './app/AuthGate';
+import AppLayout from './components/layout/AppLayout';
+import './styles.css';
+
+const DashboardPage=lazy(()=>import('./pages/DashboardPage'));const TasksPage=lazy(()=>import('./pages/TasksPage'));
+const CalendarPage=lazy(()=>import('./pages/CalendarPage'));const InboxPage=lazy(()=>import('./pages/InboxPage'));
+const EventsPage=lazy(()=>import('./pages/EventsPage'));const ProjectAiPage=lazy(()=>import('./pages/ProjectAiPage'));
+const MembersPage=lazy(()=>import('./pages/MembersPage'));const SettingsPage=lazy(()=>import('./pages/SettingsPage'));
+const LoginPage=lazy(()=>import('./pages/LoginPage'));const AuthCallbackPage=lazy(()=>import('./pages/AuthCallbackPage'));
+const MorePage=lazy(()=>import('./pages/MorePage'));
+const fallback=<div className="app-state"><span className="spinner"/><p>画面を読み込んでいます</p></div>;
+const q=new QueryClient();
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={q}><AuthProvider><StoreProvider><BrowserRouter><Suspense fallback={fallback}><Routes><Route path="/login" element={<LoginPage/>}/><Route path="/auth/callback" element={<AuthCallbackPage/>}/><Route element={<AuthGate/>}><Route element={<AppLayout/>}><Route index element={<DashboardPage/>}/><Route path="tasks" element={<TasksPage/>}/><Route path="calendar" element={<CalendarPage/>}/><Route path="inbox" element={<InboxPage/>}/><Route path="events" element={<EventsPage/>}/><Route path="project-ai" element={<ProjectAiPage/>}/><Route path="members" element={<MembersPage/>}/><Route path="settings" element={<SettingsPage/>}/><Route path="more" element={<MorePage/>}/></Route></Route></Routes></Suspense></BrowserRouter><Toaster richColors position="top-center"/></StoreProvider></AuthProvider></QueryClientProvider></React.StrictMode>);

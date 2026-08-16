@@ -17,7 +17,7 @@ export function ExecutionPanel({message, disabled, onExecute}: {message: Convers
     return (
       <div className="ai-execution-failed">
         <Pill tone="red">実行失敗</Pill>
-        <p className="ai-note">自動実行はできませんでした。解決しない場合は管理者が手動でTaskを作成してください。</p>
+        <p className="ai-note">自動実行はできませんでした。内容を確認し、必要な変更を手動で行ってください。</p>
       </div>
     );
   }
@@ -28,7 +28,7 @@ export function ExecutionPanel({message, disabled, onExecute}: {message: Convers
   }
   return (
     <div className="ai-execution-confirm">
-      <p>この提案を実行すると、{actionCount(message)}件のタスクが変更されます。実行しますか？</p>
+      <p>この提案を実行すると、{actionCount(message)}件のデータ変更が行われます。実行しますか？</p>
       <Button className="secondary" onClick={() => setConfirming(false)} disabled={disabled}>キャンセル</Button>
       <Button onClick={() => {setConfirming(false); onExecute();}} disabled={disabled}>実行を確定</Button>
     </div>
