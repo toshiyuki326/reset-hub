@@ -7,12 +7,12 @@ select has_table('public','project_kpi_entries','project KPI entries exist');
 select has_table('public','ai_conversation_sessions','AI sessions exist');
 select has_table('public','ai_conversation_messages','AI messages exist');
 select has_table('public','ai_usage_events','AI usage events exist');
-select row_security_active('public','project_goals','goals RLS active');
-select row_security_active('public','project_kpis','KPIs RLS active');
-select row_security_active('public','project_kpi_entries','KPI entries RLS active');
-select row_security_active('public','ai_conversation_sessions','sessions RLS active');
-select row_security_active('public','ai_conversation_messages','messages RLS active');
-select row_security_active('public','ai_usage_events','usage RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.project_goals'::regclass),'goals RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.project_kpis'::regclass),'KPIs RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.project_kpi_entries'::regclass),'KPI entries RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.ai_conversation_sessions'::regclass),'sessions RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.ai_conversation_messages'::regclass),'messages RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.ai_usage_events'::regclass),'usage RLS active');
 
 -- Existing staging data is never selected or changed. All fixtures use reserved UUIDs
 -- and are rolled back at the end of this transaction.
@@ -69,7 +69,7 @@ select set_config('request.jwt.claims','{"sub":"f1000000-0000-0000-0000-00000000
 select lives_ok($$insert into public.project_goals(id,community_id,title,created_by) values ('f4000000-0000-0000-0000-000000000003','f2000000-0000-0000-0000-000000000001','Owner goal','f3000000-0000-0000-0000-000000000001')$$,'owner can create goals');
 select lives_ok($$insert into public.project_kpis(id,community_id,goal_id,name,created_by) values ('f5000000-0000-0000-0000-000000000002','f2000000-0000-0000-0000-000000000001','f4000000-0000-0000-0000-000000000003','Owner KPI','f3000000-0000-0000-0000-000000000001')$$,'owner can create KPIs');
 select throws_ok($$insert into public.project_kpis(community_id,goal_id,name,created_by) values ('f2000000-0000-0000-0000-000000000002','f4000000-0000-0000-0000-000000000001','Cross community KPI','f3000000-0000-0000-0000-000000000001')$$,'23503',null,'cross-community goal/KPI link is rejected');
-select throws_ok($$insert into public.ai_conversation_messages(community_id,session_id,role,content) values ('f2000000-0000-0000-0000-000000000002','f6000000-0000-0000-0000-000000000001','user','cross')$$,'23503',null,'cross-community session/message link is rejected');
+select throws_ok($$insert into public.ai_conversation_messages(community_id,session_id,role,content) values ('f2000000-0000-0000-0000-000000000002','f6000000-0000-0000-0000-000000000001','user','cross')$$,'42501',null,'cross-community session/message insert is rejected by RLS');
 
 select set_config('request.jwt.claims','{"sub":"f1000000-0000-0000-0000-000000000005","email":"rls-other@example.invalid","role":"authenticated"}',true);
 select results_eq($$select title from public.ai_conversation_sessions where id='f6000000-0000-0000-0000-000000000001'$$,$$select null::text where false$$,'other user cannot read member session');
@@ -79,7 +79,10 @@ set local role postgres;
 select throws_ok($$update public.ai_conversation_messages set proposal_status='approved',approved_by=null where id='f7000000-0000-0000-0000-000000000001'$$,'23514',null,'approved proposal requires approved_by');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"f1000000-0000-0000-0000-000000000003","email":"rls-member@example.invalid","role":"authenticated"}',true);
-select lives_ok($$update public.ai_conversation_messages set proposal_status='executed',approved_by='f3000000-0000-0000-0000-000000000003' where id='f7000000-0000-0000-0000-000000000001'$$,'documents the 004 direct-execution security gap fixed by 005');
+select throws_ok(
+  $$update public.ai_conversation_messages set proposal_status='executed',approved_by='f3000000-0000-0000-0000-000000000003' where id='f7000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'authenticated cannot bypass review_ai_proposal with a direct message update'
+);
 
 select * from finish();
 rollback;

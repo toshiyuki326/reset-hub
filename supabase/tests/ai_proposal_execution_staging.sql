@@ -7,7 +7,7 @@ begin;
 select plan(22);
 
 select has_table('public','ai_proposal_executions','execution audit table exists');
-select row_security_active('public','ai_proposal_executions','execution audit RLS active');
+select ok((select relrowsecurity from pg_class where oid = 'public.ai_proposal_executions'::regclass),'execution audit RLS active');
 select has_index('public','ai_proposal_executions','ai_proposal_executions_active_idx','partial unique index preventing concurrent executing rows exists');
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values
