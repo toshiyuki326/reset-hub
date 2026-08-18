@@ -22,7 +22,7 @@ export function StoreProvider({children}:{children:ReactNode}){
   const [loading,setLoading]=useState(!fixtureMode);
   const [error,setError]=useState<string>();
   const refreshSequence=useRef({tasks:0,events:0});
-  const reload=useCallback(async()=>{if(fixtureMode||!auth.session)return;setLoading(true);try{const w=await api.loadWorkspace();setTasks(w.tasks);setEvents(w.events);setMessages(w.messages);setMembers(w.members);setMeta({communityId:w.communityId,profileId:w.currentProfileId,role:w.role});setError(undefined)}catch(e){setError(e instanceof Error?e.message:'データを読み込めませんでした')}finally{setLoading(false)}},[auth.session]);
+  const reload=useCallback(async()=>{if(fixtureMode){setLoading(false);return;}if(!auth.session){setLoading(false);return;}setLoading(true);try{const w=await api.loadWorkspace();setTasks(w.tasks);setEvents(w.events);setMessages(w.messages);setMembers(w.members);setMeta({communityId:w.communityId,profileId:w.currentProfileId,role:w.role});setError(undefined)}catch(e){setError(e instanceof Error?e.message:'データを読み込めませんでした')}finally{setLoading(false)}},[auth.session]);
   const refreshTasks=useCallback(async()=>{if(fixtureMode||!meta.communityId)return;const sequence=++refreshSequence.current.tasks;const next=await api.loadTasks(meta.communityId);if(sequence===refreshSequence.current.tasks)setTasks(next)},[meta.communityId]);
   const refreshEvents=useCallback(async()=>{if(fixtureMode||!meta.communityId)return;const sequence=++refreshSequence.current.events;const next=await api.loadEvents(meta.communityId);if(sequence===refreshSequence.current.events)setEvents(next)},[meta.communityId]);
   useEffect(()=>{void reload()},[reload]);
