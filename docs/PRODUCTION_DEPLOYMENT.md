@@ -1,5 +1,11 @@
 # Production Deployment
 
+> Current-state guard (2026-08-21): Production already exists at `https://reset-hub.pages.dev` with project `reset-hub-production`, migrations 001–009, community `reset`, Owner bootstrap and frontend deployment complete. Migration 010 and the AI Function cost guards are local-only and not deployed. Creation, seed and bootstrap instructions below are historical reference and must not be rerun. Remaining work is Custom SMTP and separately approved application of migration 010 plus deployment of the AI Functions after required secrets exist. Unresolved `<...>` placeholders are blocking markers, never executable values.
+
+## Remaining Resend SMTP configuration
+
+This is a human Dashboard operation because it creates credentials and changes Auth delivery. Verify an owned sending domain in Resend first, then configure Supabase Authentication → Emails → SMTP Settings with host `smtp.resend.com`, port `465` (implicit TLS; `587` is the STARTTLS alternative), username `resend`, password set to a dedicated Resend API key, sender email on the verified domain, and sender name `reset HUB`. Never paste the API key into chat, Git or release evidence. Preserve email confirmation/Magic Link behavior, send one controlled Owner Magic Link, and verify callback to `https://reset-hub.pages.dev/auth/callback` before raising email rate limits.
+
 ## Preconditions
 
 Use a reviewed release commit/tag, a clean worktree and a recorded immutable frontend artifact. Replace every `<...>` placeholder deliberately. Never use the staging ref `gjtkfrpgedtvfcczskix` in Production commands or frontend environment.
@@ -10,7 +16,7 @@ Use a reviewed release commit/tag, a clean worktree and a recorded immutable fro
 2. Verify Supabase backup status and take an off-site logical dump where supported.
 3. Create/confirm the dedicated Production Supabase project and plan.
 4. Link only after visually verifying the Production project name/ref twice.
-5. Apply migrations 001–009. Do **not** run `supabase/seed.sql` in Production.
+5. Verify existing migrations 001–009, then apply only the separately approved forward migration 010. Do **not** run `supabase/seed.sql` in Production.
 6. Verify schema, RLS, table grants, SECURITY DEFINER grants and migration list.
 7. Create `reset` community and one unused Owner invitation through a reviewed one-time bootstrap procedure; do not create fixture/RC rows.
 8. Configure Production Auth URL/email/SMTP settings.
@@ -80,6 +86,8 @@ VITE_APP_ENV=production
 | LINE | `LINE_CHANNEL_SECRET` | if enabled | yes | Dedicated Production channel secret |
 
 Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; never expose or copy the service-role value to the frontend. Staging must explicitly use `APP_ENV=staging`; local development uses `APP_ENV=development`.
+
+Before step 9, configure the dedicated OpenAI project with an initial $5/month operating target and alerts at $2/$4/$5. Treat that amount as an operational target, not a guaranteed billing stop; verify the provider's selected spend-limit behavior, assign an alert owner, and follow `PRODUCTION_AI_COST_POLICY.md`. Do not create the key or enable the AI Functions until that audit has been accepted.
 
 ## Owner bootstrap (reviewed one-time SQL)
 

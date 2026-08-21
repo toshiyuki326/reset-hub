@@ -1,5 +1,7 @@
 # Production Architecture
 
+Current state (2026-08-21): the Production frontend and Supabase database already exist and are operational at `https://reset-hub.pages.dev` / `reset-hub-production` in Tokyo. The AI Functions and their Function secrets are not deployed; Google Calendar and LINE are intentionally disabled for v1. Treat provisioning language below as architecture reference, not authorization to recreate existing resources.
+
 ## Environment boundary
 
 Production is a separate stack, not a mode of staging. It requires a distinct HTTPS frontend origin, Supabase project/ref, database, Auth users, anon key, Function secrets, OpenAI key/project, Google OAuth client and LINE channel/webhook. No staging project ref, URL, key, OAuth client, webhook or test community UUID may be copied.
@@ -9,9 +11,9 @@ Production is a separate stack, not a mode of staging. It requires a distinct HT
 | Frontend | Immutable React/Vite PWA artifact on an HTTPS static host with SPA history fallback and atomic promotion/rollback |
 | Supabase | Dedicated paid Production project: Auth, Postgres, Storage capability, Edge Functions and logs |
 | Auth | Email Magic Link, invitation-gated application bootstrap, exact production callback URL |
-| Database | Migrations 001–009 in order; RLS and grants remain enabled |
+| Database | Existing Production has migrations 001–009; migration 010 adds local-candidate AI quotas and requires separate Production approval; RLS and grants remain enabled |
 | Edge Functions | `project-ai-chat`, `execute-ai-proposal`, `google-calendar-connect`, `google-calendar-sync`, `line-webhook` when each integration is enabled |
-| AI | Dedicated Production OpenAI API key; `gpt-4.1-mini` unless an approved model change is separately tested |
+| AI | Dedicated Production OpenAI API key; `gpt-4.1-mini` unless an approved model change is separately tested; initial $5/month operating target with $2/$4/$5 alerts (not a hard-stop guarantee) |
 | Google | Dedicated Production OAuth Web Client and redirect URI tied to the Production Supabase ref |
 | LINE | Dedicated Production channel secret/access token and Production webhook URL |
 
@@ -42,5 +44,6 @@ Before approval, record without secrets:
 - Supabase plan, daily-backup retention and PITR decision
 - Owner email and display name
 - OpenAI organization/project and budget alert owner
+- acknowledgement of `PRODUCTION_AI_COST_POLICY.md`, including the initial $5/month target and the remaining monthly dollar-circuit-breaker gap
 - Google OAuth client owner and LINE channel owner
 - rollback artifact identifier and on-call contact

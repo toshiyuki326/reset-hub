@@ -14,7 +14,7 @@ Decision date: 2026-08-16. Prices and quotas must be rechecked at purchase time.
 | Backup retention | Pro daily backups, 7 days; monthly restore drill | Team provides 14-day daily retention; PITR offers 7/14/28-day granular windows. | Plan/add-on changeable. Restore evidence must precede reliance. |
 | SMTP | Custom SMTP before inviting Production users | Supabase built-in mail only for pre-launch smoke. | Changeable without DB migration; DNS verification and deliverability testing required. |
 | Production Owner | Named accountable person using an organization-controlled mailbox with MFA | Shared mailbox only if access/audit ownership is explicit. | Owner membership can be transferred later through reviewed access procedure. |
-| OpenAI | Dedicated project/key; `gpt-4.1-mini`; $25 monthly soft budget; alerts at $10/$20/$25 | Start at $10 for very small private pilot; increase only from measured usage. | Budget/model/key are changeable; model changes require regression validation. |
+| OpenAI | Dedicated project/key; `gpt-4.1-mini`; initial $5/month operating target; alerts at $2/$4/$5; increase only from measured Production usage | A separately approved higher target after usage review. | The $5 target is not a guaranteed billing stop. Budget/model/key are changeable; model changes require regression validation. |
 | Google Calendar | Disabled for v1 launch; enable as phase 2 | Enable at launch only with named owner, Production OAuth client, consent/callback and token incident runbook. | Later enablement is isolated but requires Function secrets/deploy and smoke tests. |
 | LINE | Disabled for v1 launch; enable as phase 3 | Enable after Google or independently when a named operator/channel exists. | Later enablement requires Production channel, webhook secret/deploy and replay/signature tests. |
 | Release window | Weekday 10:00–12:00 JST, avoiding holidays, with 2 hours observation | Another staffed low-usage window. | Per-release choice; availability of owners matters more than clock time. |
@@ -54,7 +54,7 @@ The built-in Supabase sender is not an acceptable normal Production dependency: 
 
 Use a Production-only OpenAI project and restricted server-side key. Keep `gpt-4.1-mini` for v1 because the current structured-output contract and staging validation target it. Current application guards are 10 requests/profile/5 minutes, 50/community/5 minutes, 4,000 input characters, 30,000 serialized-context characters, 20 history messages, 1,200 output tokens, 20-second attempts and at most two attempts.
 
-Start with a $25 monthly budget and $10/$20/$25 notifications. Review daily for launch week and weekly thereafter using OpenAI Costs plus `ai_usage_events`. A project budget should be treated as an alert/control setting, not assumed to be a guaranteed hard stop. Rotate the key every 90 days or immediately on suspected disclosure; update only the Edge secret, smoke test, then revoke the old key. On spend anomaly or provider incident, disable AI entry points/fail closed while preserving conversations and proposals.
+Start with a $5/month operating target and $2/$4/$5 notifications. Review daily for launch week and weekly thereafter using OpenAI Costs plus `ai_usage_events`; increase the target only after an explicit review of real Production usage. Do not treat $5 as a guaranteed billing stop: verify the selected OpenAI spend-limit mode and retain operational monitoring. Rotate the key every 90 days or immediately on suspected disclosure; update only the Edge secret, smoke test, then revoke the old key. On spend anomaly or provider incident, disable AI generation/fail closed while preserving conversations, approved proposals and the non-AI executor path. See `PRODUCTION_AI_COST_POLICY.md` for the audited application limits and recommended follow-up controls.
 
 At current published rates, `gpt-4.1-mini` is $0.40/M input tokens and $1.60/M output tokens. Reprice before approval.
 
@@ -101,12 +101,12 @@ Copy, replace bracketed values where necessary, and return:
 6. Backup/RPO: Tier B — daily backup 7 days, RPO <24h, RTO target 4h (recommended)
 7. Owner email: [organization-controlled email]
 8. SMTP: Custom SMTP before invitations; provider [name] (recommended)
-9. OpenAI budget: $25/month; alerts $10/$20/$25 (recommended)
+9. OpenAI budget: initial $5/month operating target; alerts $2/$4/$5; not a hard-stop guarantee (recommended)
 10. Google Calendar: Disabled at v1; phase 2 (recommended)
 11. LINE: Disabled at v1; phase 3 (recommended)
 12. Release window: Weekday 10:00–12:00 JST + 2h observation (recommended)
 13. Incident owner: [name]; backup contact [name]
-14. Commit/tag approval: Approve six commits and annotated v1.0.0-rc.1 [yes/no]
+14. Commit/tag approval: Approve the cost-guard commits and annotated v1.0.0-rc.3 [yes/no]
 ```
 
 Unresolved bracketed items block Production deployment approval. They do not authorize resource creation or remote changes.

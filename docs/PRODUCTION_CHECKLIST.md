@@ -1,5 +1,7 @@
 # Production Release Checklist
 
+Existing-environment reconciliation (2026-08-21): Cloudflare frontend, Tokyo Pro Supabase, migrations 001–009, `reset` community, Owner bootstrap, Magic Link, dashboard and Task smoke are complete. Do not recreate or replay them. Production AI Functions and Function secrets are absent; Resend Custom SMTP is not yet verified.
+
 Every item needs owner, timestamp and evidence link.
 
 ## Approval inputs
@@ -19,7 +21,7 @@ Every item needs owner, timestamp and evidence link.
 - [ ] RPO/RTO and PITR decision approved
 - [ ] Plan/compute supports the approved retention; PITR enabled if RPO is below 24 hours
 - [ ] Off-site logical dump policy confirmed
-- [ ] Migrations 001–009 reviewed in order
+- [ ] Migrations 001–010 reviewed in order; 010 is the forward-only AI quota change
 - [ ] `seed.sql` explicitly excluded
 - [ ] Production `reset` community and Owner invitation bootstrap reviewed
 
@@ -31,6 +33,8 @@ Every item needs owner, timestamp and evidence link.
 - [ ] `APP_URL` is only the Production origin
 - [ ] `APP_ENV=production`; staging remains `APP_ENV=staging`
 - [ ] OpenAI, Google and LINE resources are Production-specific
+- [ ] OpenAI initial operating target is $5/month; alerts are $2/$4/$5; owner acknowledges this is not a guaranteed billing stop
+- [ ] OpenAI model access/rate limits and the application gaps in `PRODUCTION_AI_COST_POLICY.md` are reviewed before AI enablement
 - [ ] Required secret names present; no values captured in evidence
 - [ ] Auth email provider, Site URL, exact `/auth/callback`, SMTP sender/domain and delivery test completed
 - [ ] Functions deployed only after secrets; status/version/SHA and `verify_jwt` recorded
@@ -39,7 +43,7 @@ Every item needs owner, timestamp and evidence link.
 ## Verification
 
 - [ ] Full local quality gates green
-- [ ] Production migrations list matches 001–009
+- [ ] Production migrations list matches approved release migrations 001–010 before AI enablement
 - [ ] RLS/grants/security-definer checks pass
 - [ ] AI Functions ACTIVE with JWT verification
 - [ ] Known-origin CORS 204; unknown origin 403/no Allow-Origin

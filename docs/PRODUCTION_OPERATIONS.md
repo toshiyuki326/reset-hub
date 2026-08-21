@@ -33,7 +33,9 @@ Rotate one integration at a time: create the replacement in its provider, update
 
 ## OpenAI cost envelope
 
-Code limits are 10 requests/profile/5 minutes, 50/community/5 minutes, 4,000-character user input, 30,000-character serialized context, 20 history messages, 1,200 output tokens, 20-second attempts and at most two provider attempts. Usage is recorded in `ai_usage_events`.
+The local release candidate limits are 5 requests/profile/5 minutes, 25 generations/profile/UTC day, 20 requests/community/5 minutes, 100 generations/community/UTC day, 4,000-character user input, 30,000-character serialized context, 20 history messages, 1,200 output tokens, 20-second attempts and at most two provider attempts. Only network/timeout and 5xx failures receive the single retry. Usage is recorded in `ai_usage_events`. Production retains the previously deployed state until migration 010 and the updated Function receive separate approval.
+
+The approved initial operating target is $5/month with alerts at $2/$4/$5. Increase it only after reviewing real Production usage. This target is not a guaranteed billing stop; confirm the selected provider spend-limit behavior and follow the escalation/circuit-breaker recommendations in `PRODUCTION_AI_COST_POLICY.md`.
 
 At the current official `gpt-4.1-mini` rates ($0.40/M input, $1.60/M output), an illustrative conservative request of 10,000 input + 1,200 output tokens is about $0.00592. At the community limiter's theoretical 14,400 requests/day, that is about $85.25/day or $2,557.44/30 days for one provider attempt per request. A fully billed second attempt could approach twice that amount. This is a protective scenario, not a forecast or hard billing cap: actual cost depends on token counts, provider acceptance/retry behavior and active traffic. Configure OpenAI project budgets/alerts and monitor `ai_usage_events`.
 
