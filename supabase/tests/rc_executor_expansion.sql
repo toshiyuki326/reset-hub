@@ -54,8 +54,8 @@ select throws_ok($$select public.execute_ai_proposal('fd500000-0000-0000-0000-00
 select throws_ok($$select public.execute_ai_proposal('ffffffff-ffff-ffff-ffff-ffffffffffff','fd200000-0000-0000-0000-000000000001')$$,'AI008',null,'forged message id denied');
 select throws_ok($$select public.execute_ai_proposal('fd500000-0000-0000-0000-000000000007','fd200000-0000-0000-0000-000000000001')$$,'AI007',null,'cross-community goal update denied');
 select is((select proposal_status::text from public.ai_conversation_messages where id='fd500000-0000-0000-0000-000000000007'),'approved','cross-community denial rolls back');
-select lives_ok($test$do $block$ begin for i in 1..10 loop perform public.claim_project_ai_request('fd100000-0000-0000-0000-000000000001','fd200000-0000-0000-0000-000000000001'); end loop; end $block$$test$,'first ten profile requests accepted');
-select throws_ok($$select public.claim_project_ai_request('fd100000-0000-0000-0000-000000000001','fd200000-0000-0000-0000-000000000001')$$,'AI010',null,'eleventh profile request rate limited');
-select is((select request_count from public.ai_rate_limit_windows where scope='profile' and scope_id='fd200000-0000-0000-0000-000000000001'),10,'rejected rate claim is rolled back');
+select lives_ok($test$do $block$ begin for i in 1..5 loop perform public.claim_project_ai_request('fd100000-0000-0000-0000-000000000001','fd200000-0000-0000-0000-000000000001'); end loop; end $block$$test$,'first five profile generation requests accepted');
+select throws_ok($$select public.claim_project_ai_request('fd100000-0000-0000-0000-000000000001','fd200000-0000-0000-0000-000000000001')$$,'AI010',null,'sixth profile request rate limited');
+select is((select request_count from public.ai_rate_limit_windows where scope='profile' and scope_id='fd200000-0000-0000-0000-000000000001'),5,'rejected rate claim is rolled back');
 select * from finish();
 rollback;

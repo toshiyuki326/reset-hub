@@ -16,7 +16,7 @@ Deno.serve(async req=>{
   if(req.method!=='POST')return generic(req,'INVALID_REQUEST',405);
   if(Number(req.headers.get('content-length')||0)>16_000)return generic(req,'INVALID_REQUEST',413);
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
-  let profileId:string|undefined;let communityId:string|undefined;let sessionId:string|undefined;let model=Deno.env.get('OPENAI_MODEL')||'gpt-4.1-mini';
+  let profileId:string|undefined;let communityId:string|undefined;let sessionId:string|undefined;let model='gpt-4.1-mini';
   try{
     const jwt=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/,'');
     if(!jwt)return generic(req,'AUTHENTICATION_ERROR',401);

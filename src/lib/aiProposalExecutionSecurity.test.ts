@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';import {readFileSync} from 'node:fs';
 
 const migration=readFileSync(new URL('../../supabase/migrations/202608130006_ai_proposal_execution_foundation.sql',import.meta.url),'utf8');
 const rcMigration=readFileSync(new URL('../../supabase/migrations/202608150008_rc_executor_expansion_and_hardening.sql',import.meta.url),'utf8');
+const costGuardMigration=readFileSync(new URL('../../supabase/migrations/202608210010_ai_generation_cost_guards.sql',import.meta.url),'utf8');
 const read=(name:string)=>readFileSync(new URL(`../../supabase/functions/execute-ai-proposal/${name}`,import.meta.url),'utf8');
 const index=read('index.ts');const executor=read('executor.ts');const schema=read('schema.ts');const taskExecutor=read('taskExecutor.ts');const actionContract=readFileSync(new URL('../../supabase/functions/_shared/actionContract.ts',import.meta.url),'utf8');
 const service=readFileSync(new URL('../services/projectAiService.ts',import.meta.url),'utf8');
@@ -125,7 +126,7 @@ describe('RC executor expansion and grants',()=>{
   it('uses a fixed five-action allowlist with no dynamic SQL',()=>{expect(rcMigration).toContain("not in ('create_task','update_task','create_goal','update_goal','create_event')");expect(rcMigration).not.toMatch(/\bexecute\s+format\s*\(/i)});
   it('keeps goal/event writes in the same atomic executor transaction',()=>{expect(rcMigration).toContain('insert into public.project_goals');expect(rcMigration).toContain('update public.project_goals set');expect(rcMigration).toContain('insert into public.events');expect(rcMigration).toContain("set proposal_status='executed'")});
   it('keeps message update and executor RPC unavailable to authenticated',()=>{expect(rcMigration).toContain('grant select, insert on table public.ai_conversation_messages to authenticated');expect(rcMigration).toContain('revoke all on function public.execute_ai_proposal(uuid,uuid) from public, anon, authenticated')});
-  it('rate limits through an atomic service-only RPC',()=>{expect(rcMigration).toContain('create table public.ai_rate_limit_windows');expect(rcMigration).toContain('if v_count>10');expect(rcMigration).toContain('if v_count>50');expect(rcMigration).toContain('grant execute on function public.claim_project_ai_request(uuid,uuid) to service_role')});
+  it('rate limits through an atomic service-only RPC',()=>{expect(rcMigration).toContain('create table public.ai_rate_limit_windows');expect(costGuardMigration).toContain('if v_count > 5');expect(costGuardMigration).toContain('if v_count > 20');expect(costGuardMigration).toContain('if v_count > 25');expect(costGuardMigration).toContain('if v_count > 100');expect(costGuardMigration.match(/on conflict/g)).toHaveLength(4);expect(costGuardMigration).toContain('grant execute on function public.claim_project_ai_request(uuid, uuid) to service_role')});
 });
 
 describe('browser integration', () => {

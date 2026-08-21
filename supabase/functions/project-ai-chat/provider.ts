@@ -1,9 +1,16 @@
 import {providerResponseEnvelopeSchema,responseJsonSchema,type StructuredAiResponse} from './schema.ts';
 import {projectAiSystemInstruction} from './prompt.ts';
 export type ProviderErrorCode='RATE_LIMIT'|'PROVIDER_UNAVAILABLE'|'INVALID_STRUCTURED_RESPONSE';
-export type ProviderDiagnostic={stage:'response_shape'|'response_incomplete'|'response_refusal'|'json_parse'|'zod_validation';status?:string;incompleteReason?:string;bodyKeys?:string[];outputTypes?:string[];contentTypes?:string[];issues?:Array<{path:string;code:string;expected?:string}>};
+export type ProviderDiagnostic={stage:'model_validation'|'response_shape'|'response_incomplete'|'response_refusal'|'json_parse'|'zod_validation';status?:string;incompleteReason?:string;bodyKeys?:string[];outputTypes?:string[];contentTypes?:string[];issues?:Array<{path:string;code:string;expected?:string}>};
 export class ProviderError extends Error{constructor(public code:ProviderErrorCode,public diagnostic?:ProviderDiagnostic){super(code)}}
 export type ProviderResult={response:StructuredAiResponse;model:string;inputTokens:number;outputTokens:number};
+export const ALLOWED_OPENAI_MODELS=['gpt-4.1-mini'] as const;
+
+export function resolveOpenAiModel(value=Deno.env.get('OPENAI_MODEL')):typeof ALLOWED_OPENAI_MODELS[number]{
+  const model=value||'gpt-4.1-mini';
+  if(!ALLOWED_OPENAI_MODELS.includes(model as typeof ALLOWED_OPENAI_MODELS[number]))throw new ProviderError('PROVIDER_UNAVAILABLE',{stage:'model_validation'});
+  return model as typeof ALLOWED_OPENAI_MODELS[number];
+}
 
 const record=(value:unknown):Record<string,unknown>|undefined=>value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
 const records=(value:unknown)=>Array.isArray(value)?value.map(record).filter((item):item is Record<string,unknown>=>Boolean(item)):[];
@@ -24,12 +31,14 @@ export function extractOpenAiOutput(body:Record<string,unknown>){
 
 export async function requestOpenAi(input:string,fetcher:typeof fetch=fetch):Promise<ProviderResult>{
   const apiKey=Deno.env.get('OPENAI_API_KEY');if(!apiKey)throw new ProviderError('PROVIDER_UNAVAILABLE');
-  const model=Deno.env.get('OPENAI_MODEL')||'gpt-4.1-mini';let response:Response|undefined;
+  const model=resolveOpenAiModel();let response:Response|undefined;
   for(let attempt=0;attempt<2;attempt++){
     try{response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),body:JSON.stringify({model,instructions:projectAiSystemInstruction,input,max_output_tokens:1200,text:{format:{type:'json_schema',name:'reset_hub_project_ai_response',strict:true,schema:responseJsonSchema}}})})}catch{response=undefined}
     if(response?.status===429)throw new ProviderError('RATE_LIMIT');
     if(response?.ok)break;
-    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,200));
+    const retryable=!response||response.status>=500;
+    if(!retryable||attempt===1)break;
+    await new Promise(resolve=>setTimeout(resolve,200));
   }
   if(!response?.ok)throw new ProviderError('PROVIDER_UNAVAILABLE');
   const body=record(await response.json())||{};const structured=extractOpenAiOutput(body);
